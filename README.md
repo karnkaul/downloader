@@ -12,6 +12,7 @@
   - Linking/loading libcurl dynamically is not supported
 - Link to the `downloader::downloader-lib` CMake target
 - Use the top-level `downloader::Curl` RAII wrapper unless libcurl is already initialized/shut-down elsewhere
+- TLS/SSL support depends on libcurl defaults for the build environment and/or user customization
 
 ### Example
 
@@ -27,9 +28,4 @@ See the included [example](example/src/main.cpp).
 
 Pull requests are welcome.
 
-## External Dependencies
-
-* [klib](https://github.com/karnkaul/klib)
-* [djson](https://github.com/karnkaul/djson)
-
-[**Original Repository**](https://github.com/karnkaul/locc)
+[**Original Repository**](https://github.com/karnkaul/downloader)
