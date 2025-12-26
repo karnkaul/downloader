@@ -3,7 +3,7 @@ project(${package_name}-example)
 add_executable(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-  ${package_name}::${package_name}-lib
+  ${package_name}::${package_name}
 )
 
 if(MINGW)
