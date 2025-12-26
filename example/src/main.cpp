@@ -29,7 +29,7 @@ auto run(int const argc, char const* const* const argv) -> int {
 		return out == stderr ? EXIT_FAILURE : EXIT_SUCCESS;
 	};
 
-	auto request = downloader::Request{.url = "https://example.org"};
+	auto request = downloader::Request{.url = "http://example.org"};
 	if (!args.empty()) {
 		if (args.size() > 1 || is_option(args.front())) { return print_usage(stderr); }
 		request.url = args.front();
