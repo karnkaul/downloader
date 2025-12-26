@@ -108,7 +108,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: configure
-        run: cmake -S . --preset=ninja-clang -B build
+        run: |
+          set OPENSSL_ROOT_DIR="C:/Program Files/OpenSSL"
+          cmake -S . --preset=ninja-clang -B build
       - name: build debug
         run: cmake --build build --config=Debug -- -v
       - name: build release
