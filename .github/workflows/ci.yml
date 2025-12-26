@@ -25,9 +25,9 @@ jobs:
       - name: build release
         run: cmake --build build --config=Release -- -v
       - name: test debug
-        run: cd build && ctest -V -C Debug
+        run: cd build; example/Debug/downloader-example
       - name: test release
-        run: cd build && ctest -V -C Release
+        run: cd build; example/Release/downloader-example
   x64-linux-clang:
     runs-on: ubuntu-latest
     steps:
@@ -46,9 +46,9 @@ jobs:
       - name: build release
         run: cmake --build build --config=Release -- -v
       - name: test debug
-        run: cd build && ctest -V -C Debug
+        run: cd build; example/Debug/downloader-example
       - name: test release
-        run: cd build && ctest -V -C Release
+        run: cd build; example/Release/downloader-example
   arm64-linux-gcc:
     runs-on: ubuntu-24.04-arm
     steps:
@@ -65,9 +65,9 @@ jobs:
       - name: build release
         run: cmake --build build --config=Release -- -v
       - name: test debug
-        run: cd build && ctest -V -C Debug
+        run: cd build; example/Debug/downloader-example
       - name: test release
-        run: cd build && ctest -V -C Release
+        run: cd build; example/Release/downloader-example
   arm64-linux-clang:
     runs-on: ubuntu-24.04-arm
     steps:
@@ -86,9 +86,9 @@ jobs:
       - name: build release
         run: cmake --build build --config=Release -- -v
       - name: test debug
-        run: cd build && ctest -V -C Debug
+        run: cd build; example/Debug/downloader-example
       - name: test release
-        run: cd build && ctest -V -C Release
+        run: cd build; example/Release/downloader-example
   x64-windows-vs22:
     runs-on: windows-2025
     steps:
@@ -100,9 +100,9 @@ jobs:
       - name: build release
         run: cmake --build build --config=Release --parallel
       - name: test debug
-        run: cd build && ctest -V -C Debug
+        run: cd build; example/Debug/downloader-example
       - name: test release
-        run: cd build && ctest -V -C Release
+        run: cd build; example/Release/downloader-example
   x64-windows-clang:
     runs-on: windows-2025
     steps:
@@ -114,9 +114,9 @@ jobs:
       - name: build release
         run: cmake --build build --config=Release -- -v
       - name: test debug
-        run: cd build && ctest -V -C Debug
+        run: cd build; example/Debug/downloader-example
       - name: test release
-        run: cd build && ctest -V -C Release
+        run: cd build; example/Release/downloader-example
   x64-mingw-gcc:
     runs-on: windows-2025
     steps:
@@ -128,6 +128,6 @@ jobs:
       - name: build release
         run: cmake --build build --config=Release -- -v
       - name: test debug
-        run: cd build && ctest -V -C Debug
+        run: cd build; example/Debug/downloader-example
       - name: test release
-        run: cd build && ctest -V -C Release
+        run: cd build; example/Release/downloader-example

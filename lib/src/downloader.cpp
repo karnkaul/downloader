@@ -1,5 +1,7 @@
 #include "downloader/download.hpp"
 #include <curl/curl.h>
+#include <algorithm>
+#include <iterator>
 #include <memory>
 
 namespace downloader {
