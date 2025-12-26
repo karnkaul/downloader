@@ -1,0 +1,11 @@
+{
+  "packages": [
+    {
+      "uri": "curl/curl",
+      "branch": "curl-8_16_0",
+      "remove_subpaths": [
+        "tests"
+      ]
+    }
+  ]
+}
