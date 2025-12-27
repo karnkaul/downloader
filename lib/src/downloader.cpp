@@ -91,15 +91,6 @@ template <typename PayloadT>
 		.type = ErrorType::Curl,
 	}};
 }
-
-template <typename PayloadT>
-[[nodiscard]] auto wrap_error(Response<PayloadT> const& response, std::string_view const base_error_text) {
-	return std::unexpected{Error{
-		.code = std::int64_t(response.status.get_code()),
-		.text = to_http_error_text(response.status, base_error_text),
-		.type = ErrorType::Http,
-	}};
-}
 } // namespace
 
 auto Request::build_url() const -> std::string {
@@ -124,8 +115,8 @@ auto Gateway::get_bytes(Request request) const -> Result<std::vector<std::byte>>
 
 	auto ret = wrap_response(std::move(response->bytes), response->code);
 	if (ret.status.is_error()) {
-		auto const error_text = as_string_view(ret.payload);
-		return wrap_error(ret, error_text);
+		auto error_text = to_http_error_text(ret.status, as_string_view(ret.payload));
+		return std::unexpected{ret.rewrap_as_error(std::move(error_text))};
 	}
 
 	return ret;
