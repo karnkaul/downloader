@@ -6,7 +6,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_DEBUG_POSTFIX "-d")
 
 set(package_name downloader)
-set(build_version 0.1.2)
+set(build_version 0.1.3)
 
 project(${package_name} VERSION ${build_version})
 

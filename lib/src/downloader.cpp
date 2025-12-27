@@ -1,8 +1,12 @@
 #include "downloader/download.hpp"
+#include "downloader/http/gateway.hpp"
 #include <curl/curl.h>
 #include <algorithm>
+#include <cstring>
+#include <format>
 #include <iterator>
 #include <memory>
+#include <utility>
 
 namespace downloader {
 namespace {
@@ -22,7 +26,7 @@ class EasyHandle {
 
 	[[nodiscard]] auto perform() -> std::expected<Response, Error> {
 		auto const err = curl_easy_perform(m_handle.get());
-		if (err != CURLE_OK) { return std::unexpected(Error{.code = CurlCode{err}, .text = std::move(m_error)}); }
+		if (err != CURLE_OK) { return std::unexpected{Error{.code = CurlCode{err}, .text = std::move(m_error)}}; }
 
 		auto response_code = long{};
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
@@ -57,6 +61,93 @@ class EasyHandle {
 	std::string m_error{};
 };
 } // namespace
+
+namespace http {
+namespace {
+template <typename PayloadT>
+[[nodiscard]] auto wrap_response(PayloadT payload, std::int64_t const status_code) {
+	return Response<PayloadT>{.payload = std::move(payload), .status = Status{status_code}};
+}
+
+[[nodiscard]] auto to_http_error_text(CurlCode const code, std::string_view const error_text) -> std::string {
+	return std::format("curl error ({}):\n{}", std::to_underlying(code), error_text);
+}
+
+[[nodiscard]] auto to_http_error_text(Status const& status, std::string_view const error_text) -> std::string {
+	auto const prefix = [status] -> std::string_view {
+		switch (status.get_category()) {
+		case Status::Category::ClientError: return "http client";
+		case Status::Category::ServerError: return "http server";
+		default: return "http";
+		}
+	}();
+	return std::format("{} error ({}):\n{}", prefix, std::to_underlying(status.get_code()), error_text);
+}
+
+[[nodiscard]] auto wrap_error(downloader::Error const& error) {
+	return std::unexpected{Error{
+		.code = std::int64_t(error.code),
+		.text = to_http_error_text(error.code, error.text),
+		.type = ErrorType::Curl,
+	}};
+}
+
+template <typename PayloadT>
+[[nodiscard]] auto wrap_error(Response<PayloadT> const& response, std::string_view const base_error_text) {
+	return std::unexpected{Error{
+		.code = std::int64_t(response.status.get_code()),
+		.text = to_http_error_text(response.status, base_error_text),
+		.type = ErrorType::Http,
+	}};
+}
+} // namespace
+
+auto Request::build_url() const -> std::string {
+	auto ret = base_url;
+	if (!queries.empty()) {
+		ret += '?';
+		for (auto const& [key, value] : queries) { std::format_to(std::back_inserter(ret), "{}={}&", key, value); }
+		ret.pop_back();
+	}
+	return ret;
+}
+
+auto Gateway::get_bytes(Request request) const -> Result<std::vector<std::byte>> {
+	if (request.base_url.empty()) { return {}; }
+	auto const download_request = downloader::Request{
+		.url = request.build_url(),
+		.user_agent = std::move(request.user_agent),
+	};
+
+	auto response = perform_download(download_request);
+	if (!response) { return wrap_error(response.error()); }
+
+	auto ret = wrap_response(std::move(response->bytes), response->code);
+	if (ret.status.is_error()) {
+		auto const error_text = as_string_view(ret.payload);
+		return wrap_error(ret, error_text);
+	}
+
+	return ret;
+}
+
+auto Gateway::get_string(Request request) const -> Result<std::string> {
+	auto response = get_bytes(std::move(request));
+	if (!response) { return std::unexpected{std::move(response.error())}; }
+
+	auto ret = std::string{};
+	if (!response->payload.empty()) {
+		ret.resize(response->payload.size());
+		std::memcpy(ret.data(), response->payload.data(), ret.size());
+	}
+
+	return response->rewrap(std::move(ret));
+}
+
+auto Gateway::perform_download(downloader::Request const& request) const -> downloader::Result {
+	return download(request);
+}
+} // namespace http
 } // namespace downloader
 
 auto downloader::download(Request const& request) -> Result {
