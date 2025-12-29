@@ -1,5 +1,5 @@
 #include "downloader/download.hpp"
-#include "downloader/http/gateway.hpp"
+#include "downloader/http/fetch.hpp"
 #include <curl/curl.h>
 #include <algorithm>
 #include <cstring>
@@ -10,12 +10,19 @@
 
 namespace downloader {
 namespace {
+struct CurlSlistDeleter {
+	void operator()(curl_slist* ptr) const noexcept { curl_slist_free_all(ptr); }
+};
+using CurlSlist = std::unique_ptr<curl_slist, CurlSlistDeleter>;
+
 class EasyHandle {
   public:
 	explicit EasyHandle(Request const& request) : m_handle(curl_easy_init()) {
 		set_callbacks();
 		set_opt(CURLOPT_URL, request.url.c_str());
 		if (!request.user_agent.empty()) { set_opt(CURLOPT_USERAGENT, request.user_agent.c_str()); }
+		if (!request.post_fields.empty()) { set_opt(CURLOPT_POSTFIELDS, request.post_fields.c_str()); }
+		add_headers(request.headers);
 	}
 
 	template <typename Type>
@@ -31,7 +38,7 @@ class EasyHandle {
 		auto response_code = long{};
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
 		curl_easy_getinfo(m_handle.get(), CURLINFO_RESPONSE_CODE, &response_code);
-		return Response{.code = std::int64_t(response_code), .bytes = std::move(m_bytes)};
+		return Response{.code = std::int64_t(response_code), .bytes = ByteArray{.bytes = std::move(m_bytes)}};
 	}
 
   private:
@@ -55,7 +62,15 @@ class EasyHandle {
 		return in.size();
 	}
 
+	void add_headers(std::span<std::string const> headers) {
+		curl_slist* chunk{};
+		for (auto const& text : headers) { chunk = curl_slist_append(chunk, text.c_str()); }
+		m_headers.reset(chunk);
+		set_opt(CURLOPT_HTTPHEADER, m_headers.get());
+	}
+
 	std::unique_ptr<CURL, Deleter> m_handle{};
+	CurlSlist m_headers{};
 
 	std::vector<std::byte> m_bytes{};
 	std::string m_error{};
@@ -64,16 +79,62 @@ class EasyHandle {
 
 namespace http {
 namespace {
-template <typename PayloadT>
-[[nodiscard]] auto wrap_response(PayloadT payload, std::int64_t const status_code) {
-	return Response<PayloadT>{.payload = std::move(payload), .status = Status{status_code}};
+void append_to(std::string& out, Query const& query) {
+	if (query.key.empty()) { return; }
+	if (!query.value.empty()) {
+		std::format_to(std::back_inserter(out), "{}={}&", query.key, query.value);
+	} else {
+		out += query.key;
+	}
+	out += '&';
 }
 
-[[nodiscard]] auto to_http_error_text(CurlCode const code, std::string_view const error_text) -> std::string {
+[[nodiscard]] auto serialize_queries(std::span<http::Query const> queries) -> std::string {
+	if (queries.empty()) { return {}; }
+	auto ret = std::string{};
+	for (auto const& query : queries) { append_to(ret, query); }
+	if (ret.ends_with('&')) { ret.pop_back(); }
+	return ret;
+}
+
+void append_queries_to(std::string& out_url, std::span<Query const> queries) {
+	auto const serialized_queries = serialize_queries(queries);
+	if (!serialized_queries.empty()) { std::format_to(std::back_inserter(out_url), "?{}", serialized_queries); }
+}
+
+[[nodiscard]] auto serialize_headers(std::span<Query> queries) -> std::vector<std::string> {
+	auto ret = std::vector<std::string>{};
+	for (auto& [key, value] : queries) {
+		if (key.empty()) { continue; }
+		if (value.empty() && !key.ends_with(':')) { key.push_back(';'); }
+		key += value;
+		ret.push_back(std::move(key));
+	}
+	return ret;
+}
+
+[[nodiscard]] auto to_easy_request(http::Request request) -> downloader::Request {
+	auto ret = downloader::Request{
+		.url = std::move(request.base_url),
+		.user_agent = std::move(request.user_agent),
+	};
+
+	switch (request.verb) {
+	case Verb::Get: append_queries_to(ret.url, request.queries); break;
+	case Verb::Post: ret.post_fields = serialize_queries(request.queries); break;
+	default: break;
+	}
+
+	ret.headers = serialize_headers(request.headers);
+
+	return ret;
+}
+
+[[nodiscard]] auto to_error_text(CurlCode const code, std::string_view const error_text) -> std::string {
 	return std::format("curl error ({}):\n{}", std::to_underlying(code), error_text);
 }
 
-[[nodiscard]] auto to_http_error_text(Status const& status, std::string_view const error_text) -> std::string {
+[[nodiscard]] auto to_error_text(Status const& status, std::string_view const error_text) -> std::string {
 	auto const prefix = [status] -> std::string_view {
 		switch (status.get_category()) {
 		case Status::Category::ClientError: return "http client";
@@ -83,65 +144,35 @@ template <typename PayloadT>
 	}();
 	return std::format("{} error ({}):\n{}", prefix, std::to_underlying(status.get_code()), error_text);
 }
-
-[[nodiscard]] auto wrap_error(downloader::Error const& error) {
-	return std::unexpected{Error{
-		.code = std::int64_t(error.code),
-		.text = to_http_error_text(error.code, error.text),
-		.type = ErrorType::Curl,
-	}};
-}
 } // namespace
+} // namespace http
+} // namespace downloader
 
-auto Request::build_url() const -> std::string {
-	auto ret = base_url;
-	if (!queries.empty()) {
-		ret += '?';
-		for (auto const& [key, value] : queries) { std::format_to(std::back_inserter(ret), "{}={}&", key, value); }
-		ret.pop_back();
-	}
-	return ret;
+auto downloader::perform(Request const& request) -> Result {
+	auto handle = EasyHandle{request};
+	return handle.perform();
 }
 
-auto Gateway::get_bytes(Request request) const -> Result<std::vector<std::byte>> {
+auto downloader::http::fetch(Request request) -> Result {
 	if (request.base_url.empty()) { return {}; }
-	auto const download_request = downloader::Request{
-		.url = request.build_url(),
-		.user_agent = std::move(request.user_agent),
-	};
 
-	auto response = perform_download(download_request);
-	if (!response) { return wrap_error(response.error()); }
+	auto const easy_request = to_easy_request(std::move(request));
+	auto handle = EasyHandle{easy_request};
+	auto response = handle.perform();
 
-	auto ret = wrap_response(std::move(response->bytes), response->code);
+	if (!response) {
+		return std::unexpected{Error{
+			.code = std::int64_t(response.error().code),
+			.text = to_error_text(response.error().code, response.error().text),
+			.type = ErrorType::Curl,
+		}};
+	}
+
+	auto ret = Response{.bytes = std::move(response->bytes), .status = Status{response->code}};
 	if (ret.status.is_error()) {
-		auto error_text = to_http_error_text(ret.status, as_string_view(ret.payload));
+		auto error_text = to_error_text(ret.status, ret.bytes.as_string_view());
 		return std::unexpected{ret.rewrap_as_error(std::move(error_text))};
 	}
 
 	return ret;
-}
-
-auto Gateway::get_string(Request request) const -> Result<std::string> {
-	auto response = get_bytes(std::move(request));
-	if (!response) { return std::unexpected{std::move(response.error())}; }
-
-	auto ret = std::string{};
-	if (!response->payload.empty()) {
-		ret.resize(response->payload.size());
-		std::memcpy(ret.data(), response->payload.data(), ret.size());
-	}
-
-	return response->rewrap(std::move(ret));
-}
-
-auto Gateway::perform_download(downloader::Request const& request) const -> downloader::Result {
-	return download(request);
-}
-} // namespace http
-} // namespace downloader
-
-auto downloader::download(Request const& request) -> Result {
-	auto handle = EasyHandle{request};
-	return handle.perform();
 }

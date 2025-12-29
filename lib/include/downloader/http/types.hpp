@@ -1,4 +1,5 @@
 #pragma once
+#include "downloader/byte_array.hpp"
 #include "downloader/http/status.hpp"
 #include <expected>
 #include <string>
@@ -6,6 +7,8 @@
 
 namespace downloader::http {
 enum class ErrorType : std::int8_t { Http, Curl };
+
+enum class Verb : std::int8_t { Get, Post };
 
 struct Error {
 	std::int64_t code{};
@@ -19,32 +22,29 @@ struct Query {
 };
 
 struct Request {
-	[[nodiscard]] auto build_url() const -> std::string;
-
+	/// \brief URL to fetch. Must be a valid URL.
 	std::string base_url{};
-	std::vector<Query> queries{};
+
+	/// \brief User agent to use, if any.
 	std::string user_agent{};
+	/// \brief List of HTTP queries.
+	/// Appended to base_url if verb == Verb::Get, else added as post fields.
+	std::vector<Query> queries{};
+	/// \brief Suffix a key with ':' to remove that default header.
+	std::vector<Query> headers{};
+	/// \brief Request method.
+	Verb verb{Verb::Get};
 };
 
-template <typename PayloadT>
 struct Response {
-	template <typename Type>
-	[[nodiscard]] auto rewrap(Type payload) const -> Response<Type> {
-		return Response<Type>{.payload = std::move(payload), .status = status};
-	}
-
+	/// \returns Error with given error_text and this response's status.
 	[[nodiscard]] auto rewrap_as_error(std::string error_text) const -> Error {
-		return Error{
-			.code = std::int64_t(status.get_code()),
-			.text = std::move(error_text),
-			.type = http::ErrorType::Http,
-		};
+		return Error{.code = std::int64_t(status.get_code()), .text = std::move(error_text), .type = ErrorType::Http};
 	}
 
-	PayloadT payload{};
+	ByteArray bytes{};
 	Status status{};
 };
 
-template <typename Type>
-using Result = std::expected<Response<Type>, Error>;
+using Result = std::expected<Response, Error>;
 } // namespace downloader::http
