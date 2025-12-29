@@ -8,9 +8,9 @@
 
 - Only build-from-source workflows are supported
 - Use CMake and a preset / generator of your choice
-  - Set `DOWNLOADER_VENDOR_CURL=OFF` if the `CURL::libcurl` CMake target is already in the build tree
-  - Linking/loading libcurl dynamically is not supported
-- Link to the `kcurl::kcurl-lib` CMake target
+  - Set `KCURL_LIBCURL_LINK_TARGET` to the name of a custom CMake target that provides libcurl, if applicable
+    - Otherwise `kcurl` will use its own vendored libcurl source
+- Link to the `kcurl::kcurl` CMake target
 - Use the top-level `kcurl::Curl` RAII wrapper unless libcurl is already initialized/shut-down elsewhere
 - TLS/SSL support depends on libcurl defaults for the build environment and/or user customization
 
