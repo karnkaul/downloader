@@ -31,21 +31,31 @@ struct Request {
 	Verb verb{Verb::Get};
 };
 
+template <typename Type>
 struct Response {
+	/// \returns Rewrapped payload with this response's status.
+	template <typename T>
+	[[nodiscard]] auto rewrap_as(T payload) const -> Response<T> {
+		return Response<T>{.payload = std::move(payload), .status = status};
+	}
+
 	/// \returns Error with given error_text and this response's status.
 	[[nodiscard]] auto rewrap_as_error(std::string error_text) const -> Error {
 		return Error{.status = status, .text = std::move(error_text)};
 	}
 
-	ByteArray bytes{};
+	Type payload{};
 	Status status{};
 };
 
-using Result = std::expected<Response, Error>;
+template <typename Type>
+using Result = std::expected<Response<Type>, Error>;
 
 [[nodiscard]] auto to_easy_request(Request request) -> easy::Request;
 
-[[nodiscard]] auto fetch(easy::Request const& request) -> Result;
+[[nodiscard]] auto fetch(easy::Request const& request) -> Result<ByteArray>;
 
-[[nodiscard]] inline auto fetch(Request request) -> Result { return fetch(to_easy_request(std::move(request))); }
+[[nodiscard]] inline auto fetch(Request request) -> Result<ByteArray> {
+	return fetch(to_easy_request(std::move(request)));
+}
 } // namespace kcurl::http
