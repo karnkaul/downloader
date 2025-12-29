@@ -1,10 +1,10 @@
 #pragma once
-#include "downloader/byte_array.hpp"
+#include "kcurl/byte_array.hpp"
 #include <cstdint>
 #include <expected>
 #include <string>
 
-namespace downloader {
+namespace kcurl {
 // NOLINTNEXTLINE(performance-enum-size)
 enum struct CurlCode : std::int64_t { Ok = 0 };
 
@@ -35,4 +35,4 @@ struct Response {
 };
 
 using Result = std::expected<Response, Error>;
-} // namespace downloader
+} // namespace kcurl

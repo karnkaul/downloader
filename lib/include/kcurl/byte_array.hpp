@@ -3,7 +3,7 @@
 #include <string_view>
 #include <vector>
 
-namespace downloader {
+namespace kcurl {
 struct ByteArray {
 	/// \returns Bytes reinterpreted as a string_view.
 	[[nodiscard]] constexpr auto as_string_view() const -> std::string_view {
@@ -14,4 +14,4 @@ struct ByteArray {
 
 	std::vector<std::byte> bytes{};
 };
-} // namespace downloader
+} // namespace kcurl

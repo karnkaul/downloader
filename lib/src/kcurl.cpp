@@ -1,5 +1,5 @@
-#include "downloader/download.hpp"
-#include "downloader/http/fetch.hpp"
+#include "kcurl/easy.hpp"
+#include "kcurl/http.hpp"
 #include <curl/curl.h>
 #include <algorithm>
 #include <cstring>
@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-namespace downloader {
+namespace kcurl {
 namespace {
 struct CurlSlistDeleter {
 	void operator()(curl_slist* ptr) const noexcept { curl_slist_free_all(ptr); }
@@ -18,6 +18,14 @@ using CurlSlist = std::unique_ptr<curl_slist, CurlSlistDeleter>;
 class EasyHandle {
   public:
 	explicit EasyHandle(Request const& request) : m_handle(curl_easy_init()) {
+		set_callbacks();
+		set_opt(CURLOPT_URL, request.url.c_str());
+		if (!request.user_agent.empty()) { set_opt(CURLOPT_USERAGENT, request.user_agent.c_str()); }
+		if (!request.post_fields.empty()) { set_opt(CURLOPT_POSTFIELDS, request.post_fields.c_str()); }
+		add_headers(request.headers);
+	}
+
+	explicit EasyHandle(easy::Request const& request) : m_handle(curl_easy_init()) {
 		set_callbacks();
 		set_opt(CURLOPT_URL, request.url.c_str());
 		if (!request.user_agent.empty()) { set_opt(CURLOPT_USERAGENT, request.user_agent.c_str()); }
@@ -39,6 +47,16 @@ class EasyHandle {
 		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
 		curl_easy_getinfo(m_handle.get(), CURLINFO_RESPONSE_CODE, &response_code);
 		return Response{.code = std::int64_t(response_code), .bytes = ByteArray{.bytes = std::move(m_bytes)}};
+	}
+
+	[[nodiscard]] auto perform2() -> std::expected<easy::Response, easy::Error> {
+		auto const err = curl_easy_perform(m_handle.get());
+		if (err != CURLE_OK) { return std::unexpected{easy::Error{.code = CurlCode{err}, .text = std::move(m_error)}}; }
+
+		auto response_code = long{};
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+		curl_easy_getinfo(m_handle.get(), CURLINFO_RESPONSE_CODE, &response_code);
+		return easy::Response{.code = std::int64_t(response_code), .bytes = ByteArray{.bytes = std::move(m_bytes)}};
 	}
 
   private:
@@ -89,7 +107,7 @@ void append_to(std::string& out, Query const& query) {
 	out += '&';
 }
 
-[[nodiscard]] auto serialize_queries(std::span<http::Query const> queries) -> std::string {
+[[nodiscard]] auto serialize_queries(std::span<Query const> queries) -> std::string {
 	if (queries.empty()) { return {}; }
 	auto ret = std::string{};
 	for (auto const& query : queries) { append_to(ret, query); }
@@ -113,23 +131,6 @@ void append_queries_to(std::string& out_url, std::span<Query const> queries) {
 	return ret;
 }
 
-[[nodiscard]] auto to_easy_request(http::Request request) -> downloader::Request {
-	auto ret = downloader::Request{
-		.url = std::move(request.base_url),
-		.user_agent = std::move(request.user_agent),
-	};
-
-	switch (request.verb) {
-	case Verb::Get: append_queries_to(ret.url, request.queries); break;
-	case Verb::Post: ret.post_fields = serialize_queries(request.queries); break;
-	default: break;
-	}
-
-	ret.headers = serialize_headers(request.headers);
-
-	return ret;
-}
-
 [[nodiscard]] auto to_error_text(CurlCode const code, std::string_view const error_text) -> std::string {
 	return std::format("curl error ({}):\n{}", std::to_underlying(code), error_text);
 }
@@ -146,25 +147,37 @@ void append_queries_to(std::string& out_url, std::span<Query const> queries) {
 }
 } // namespace
 } // namespace http
-} // namespace downloader
 
-auto downloader::perform(Request const& request) -> Result {
+auto easy::perform(Request const& request) -> Result {
+	if (request.url.empty()) { return {}; }
 	auto handle = EasyHandle{request};
-	return handle.perform();
+	return handle.perform2();
 }
 
-auto downloader::http::fetch(Request request) -> Result {
-	if (request.base_url.empty()) { return {}; }
+auto http::to_easy_request(Request request) -> easy::Request {
+	auto ret = easy::Request{
+		.url = std::move(request.base_url),
+		.user_agent = std::move(request.user_agent),
+	};
 
-	auto const easy_request = to_easy_request(std::move(request));
-	auto handle = EasyHandle{easy_request};
-	auto response = handle.perform();
+	switch (request.verb) {
+	case Verb::Get: append_queries_to(ret.url, request.queries); break;
+	case Verb::Post: ret.post_fields = serialize_queries(request.queries); break;
+	default: break;
+	}
+
+	ret.headers = serialize_headers(request.headers);
+
+	return ret;
+}
+
+auto http::fetch(easy::Request const& request) -> Result {
+	auto response = easy::perform(request);
 
 	if (!response) {
 		return std::unexpected{Error{
-			.code = std::int64_t(response.error().code),
+			.curl_code = response.error().code,
 			.text = to_error_text(response.error().code, response.error().text),
-			.type = ErrorType::Curl,
 		}};
 	}
 
@@ -176,3 +189,4 @@ auto downloader::http::fetch(Request request) -> Result {
 
 	return ret;
 }
+} // namespace kcurl

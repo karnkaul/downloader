@@ -3,7 +3,7 @@ add_library(${package_name}::${package_name} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 
-message(STATUS "[downloader] linking to ${curl_link_target}")
+message(STATUS "[kcurl] linking to ${curl_link_target}")
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
   ${curl_link_target}
@@ -29,5 +29,5 @@ target_sources(${PROJECT_NAME} PUBLIC FILE_SET HEADERS
 )
 
 target_sources(${PROJECT_NAME} PRIVATE
-  src/downloader.cpp
+  src/kcurl.cpp
 )

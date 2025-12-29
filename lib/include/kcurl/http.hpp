@@ -1,19 +1,14 @@
 #pragma once
-#include "downloader/byte_array.hpp"
-#include "downloader/http/status.hpp"
-#include <expected>
-#include <string>
-#include <vector>
+#include "kcurl/easy.hpp"
+#include "kcurl/http_status.hpp"
 
-namespace downloader::http {
-enum class ErrorType : std::int8_t { Http, Curl };
-
+namespace kcurl::http {
 enum class Verb : std::int8_t { Get, Post };
 
 struct Error {
-	std::int64_t code{};
+	CurlCode curl_code{};
+	Status status{};
 	std::string text{};
-	ErrorType type{ErrorType::Http};
 };
 
 struct Query {
@@ -39,7 +34,7 @@ struct Request {
 struct Response {
 	/// \returns Error with given error_text and this response's status.
 	[[nodiscard]] auto rewrap_as_error(std::string error_text) const -> Error {
-		return Error{.code = std::int64_t(status.get_code()), .text = std::move(error_text), .type = ErrorType::Http};
+		return Error{.status = status, .text = std::move(error_text)};
 	}
 
 	ByteArray bytes{};
@@ -47,4 +42,10 @@ struct Response {
 };
 
 using Result = std::expected<Response, Error>;
-} // namespace downloader::http
+
+[[nodiscard]] auto to_easy_request(Request request) -> easy::Request;
+
+[[nodiscard]] auto fetch(easy::Request const& request) -> Result;
+
+[[nodiscard]] inline auto fetch(Request request) -> Result { return fetch(to_easy_request(std::move(request))); }
+} // namespace kcurl::http
