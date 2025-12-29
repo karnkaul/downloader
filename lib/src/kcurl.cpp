@@ -6,6 +6,7 @@
 #include <format>
 #include <iterator>
 #include <memory>
+#include <span>
 #include <utility>
 
 namespace kcurl {
