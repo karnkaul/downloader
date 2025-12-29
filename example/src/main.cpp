@@ -1,6 +1,6 @@
-#include "downloader/build_version.hpp"
-#include "downloader/curl.hpp"
-#include "downloader/http/gateway.hpp"
+#include "kcurl/build_version.hpp"
+#include "kcurl/curl.hpp"
+#include "kcurl/easy.hpp"
 #include <filesystem>
 #include <print>
 #include <span>
@@ -12,13 +12,6 @@ namespace fs = std::filesystem;
 [[nodiscard]] constexpr auto is_option(std::string_view const arg) -> bool {
 	return arg.starts_with('-') || arg.starts_with("--");
 }
-
-class HttpGateway : public downloader::http::Gateway {
-	[[nodiscard]] auto perform_download(downloader::Request const& request) const -> downloader::Result final {
-		std::println("downloading '{}' ...", request.url);
-		return Gateway::perform_download(request);
-	}
-};
 
 auto run(int const argc, char const* const* const argv) -> int {
 	auto args = std::span{argv, std::size_t(argc)};
@@ -36,17 +29,16 @@ auto run(int const argc, char const* const* const argv) -> int {
 		return out == stderr ? EXIT_FAILURE : EXIT_SUCCESS;
 	};
 
-	auto request = downloader::http::Request{.base_url = "https://example.org"};
+	auto request = kcurl::easy::Request{.url = "https://example.org"};
 	if (!args.empty()) {
 		if (args.size() > 1 || is_option(args.front())) { return print_usage(stderr); }
-		request.base_url = args.front();
+		request.url = args.front();
 	}
 
-	std::println("downloader {}", downloader::build_version_v);
-	auto const curl = downloader::Curl{};
-	auto const gateway = HttpGateway{};
+	std::println("kcurl {}\ndownloading '{}' ...", kcurl::build_version_v, request.url);
+	auto const curl = kcurl::Curl{};
 
-	auto const result = gateway.get_string(std::move(request));
+	auto const result = kcurl::easy::perform(request);
 
 	if (!result) {
 		auto const& error = result.error();
@@ -54,8 +46,8 @@ auto run(int const argc, char const* const* const argv) -> int {
 		return EXIT_FAILURE;
 	}
 
-	auto const& text = result->payload;
-	std::println("success ({})\n{}", std::int64_t(result->status.get_code()), text);
+	auto const text = result->bytes.as_string_view();
+	std::println("success ({})\n{}", result->code, text);
 
 	return EXIT_SUCCESS;
 }

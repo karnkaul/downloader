@@ -1,11 +1,10 @@
 #pragma once
-#include <cstddef>
+#include "kcurl/byte_array.hpp"
 #include <cstdint>
 #include <expected>
 #include <string>
-#include <vector>
 
-namespace downloader {
+namespace kcurl {
 // NOLINTNEXTLINE(performance-enum-size)
 enum struct CurlCode : std::int64_t { Ok = 0 };
 
@@ -17,18 +16,23 @@ struct Error {
 };
 
 struct Request {
-	/// \brief URL to fetch.
+	/// \brief URL to fetch. Must be a valid URL.
 	std::string url{};
-	/// \brief User agent to use.
+
+	/// \brief User agent to use, if any.
 	std::string user_agent{};
+	/// \brief Concatenated string of post fields, if any.
+	std::string post_fields{};
+	/// \brief List of HTTP headers, if any.
+	std::vector<std::string> headers{};
 };
 
 struct Response {
 	/// \brief Response code.
 	std::int64_t code{};
 	/// \brief Response payload as bytes.
-	std::vector<std::byte> bytes{};
+	ByteArray bytes{};
 };
 
 using Result = std::expected<Response, Error>;
-} // namespace downloader
+} // namespace kcurl

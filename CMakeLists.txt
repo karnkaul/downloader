@@ -5,23 +5,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_DEBUG_POSTFIX "-d")
 
-set(package_name downloader)
-set(build_version 0.1.3)
+set(package_name kcurl)
+set(build_version 0.1.4)
 
 project(${package_name} VERSION ${build_version})
 
-set(vendor_curl ON)
+option(KCURL_BUILD_EXAMPLE "Build kcurl example" ${PROJECT_IS_TOP_LEVEL})
+set(KCURL_LIBCURL_LINK_TARGET "" CACHE STRING "Custom CMake target to link to for libcurl (and its headers)")
 
-if(TARGET CURL::libcurl)
-  set(vendor_curl OFF)
+if(NOT"${KCURL_LIBCURL_LINK_TARGET}" STREQUAL "")
+  message(STATUS "[kcurl] not vendoring libcurl")
+  set(vendor_libcurl OFF)
+  set(curl_link_target ${KCURL_LIBCURL_LINK_TARGET})
+else()
+  message(STATUS "[kcurl] vendoring libcurl")
+  set(vendor_libcurl ON)
+  set(curl_link_target CURL::libcurl)
 endif()
-
-option(DOWNLOADER_VENDOR_CURL "downloader: vendor CURL" ${vendor_curl})
-option(DOWNLOADER_BUILD_EXAMPLE "Build downloader example" ${PROJECT_IS_TOP_LEVEL})
 
 add_subdirectory(ext)
 add_subdirectory(lib)
 
-if(DOWNLOADER_BUILD_EXAMPLE)
+if(KCURL_BUILD_EXAMPLE)
   add_subdirectory(example)
 endif()

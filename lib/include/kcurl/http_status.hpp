@@ -2,7 +2,7 @@
 #include <array>
 #include <cstdint>
 
-namespace downloader::http {
+namespace kcurl::http {
 /// \brief Wrapper over a response status code.
 class Status {
   public:
@@ -24,7 +24,7 @@ class Status {
 
 	Status() = default;
 
-	/// \param code: Pass a downloader::Response::code here.
+	/// \param code: Pass a kcurl::Response::code here.
 	explicit constexpr Status(std::int64_t const code) : m_code(Code{code}), m_category(get_status_category(m_code)) {}
 
 	[[nodiscard]] constexpr auto get_code() const -> Code { return m_code; }
@@ -67,4 +67,4 @@ class Status {
 	Code m_code{};
 	Category m_category{};
 };
-} // namespace downloader::http
+} // namespace kcurl::http

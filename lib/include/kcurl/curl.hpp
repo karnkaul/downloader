@@ -1,7 +1,7 @@
 #pragma once
 #include <curl/curl.h>
 
-namespace downloader {
+namespace kcurl {
 /// \brief Top-level RAII wrapper for curl.
 /// Use if libcurl initialization/shutdown is not already handled.
 class Curl {
@@ -14,4 +14,4 @@ class Curl {
 	explicit Curl() { curl_global_init(CURL_GLOBAL_DEFAULT); }
 	~Curl() { curl_global_cleanup(); }
 };
-} // namespace downloader
+} // namespace kcurl

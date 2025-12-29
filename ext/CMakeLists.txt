@@ -1,4 +1,4 @@
-if(DOWNLOADER_VENDOR_CURL)
+if(vendor_libcurl)
   file(ARCHIVE_EXTRACT INPUT "${CMAKE_CURRENT_SOURCE_DIR}/src.zip" DESTINATION "${CMAKE_CURRENT_SOURCE_DIR}")
 
   message(STATUS "[curl]")
