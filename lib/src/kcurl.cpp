@@ -172,7 +172,7 @@ auto http::to_easy_request(Request request) -> easy::Request {
 	return ret;
 }
 
-auto http::fetch(easy::Request const& request) -> Result {
+auto http::fetch(easy::Request const& request) -> Result<ByteArray> {
 	auto response = easy::perform(request);
 
 	if (!response) {
@@ -182,9 +182,9 @@ auto http::fetch(easy::Request const& request) -> Result {
 		}};
 	}
 
-	auto ret = Response{.bytes = std::move(response->bytes), .status = Status{response->code}};
+	auto ret = Response{.payload = std::move(response->bytes), .status = Status{response->code}};
 	if (ret.status.is_error()) {
-		auto error_text = to_error_text(ret.status, ret.bytes.as_string_view());
+		auto error_text = to_error_text(ret.status, ret.payload.as_string_view());
 		return std::unexpected{ret.rewrap_as_error(std::move(error_text))};
 	}
 
