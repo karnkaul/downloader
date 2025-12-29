@@ -101,7 +101,7 @@ namespace {
 void append_to(std::string& out, Query const& query) {
 	if (query.key.empty()) { return; }
 	if (!query.value.empty()) {
-		std::format_to(std::back_inserter(out), "{}={}&", query.key, query.value);
+		std::format_to(std::back_inserter(out), "{}={}", query.key, query.value);
 	} else {
 		out += query.key;
 	}
