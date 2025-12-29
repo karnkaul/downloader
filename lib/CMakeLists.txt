@@ -3,9 +3,10 @@ add_library(${package_name}::${package_name} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 
+message(STATUS "[downloader] linking to ${curl_link_target}")
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
-  CURL::libcurl
+  ${curl_link_target}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
