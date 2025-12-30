@@ -24,7 +24,7 @@ class Status {
 
 	Status() = default;
 
-	/// \param code: Pass a kcurl::Response::code here.
+	/// \param code: Pass an easy::Response::code here.
 	explicit constexpr Status(std::int64_t const code) : m_code(Code{code}), m_category(get_status_category(m_code)) {}
 
 	[[nodiscard]] constexpr auto get_code() const -> Code { return m_code; }

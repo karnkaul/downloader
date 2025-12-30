@@ -158,7 +158,7 @@ auto http::to_easy_request(Request request) -> easy::Request {
 	return ret;
 }
 
-auto http::fetch(easy::Request const& request) -> Result<ByteArray> {
+auto http::perform(easy::Request const& request) -> Result<ByteArray> {
 	auto response = easy::perform(request);
 
 	if (!response) {
