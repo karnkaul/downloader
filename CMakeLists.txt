@@ -6,7 +6,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_DEBUG_POSTFIX "-d")
 
 set(package_name kcurl)
-set(build_version 0.1.4)
+set(build_version 0.1.5)
 
 project(${package_name} VERSION ${build_version})
 

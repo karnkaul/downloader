@@ -18,14 +18,6 @@ using CurlSlist = std::unique_ptr<curl_slist, CurlSlistDeleter>;
 
 class EasyHandle {
   public:
-	explicit EasyHandle(Request const& request) : m_handle(curl_easy_init()) {
-		set_callbacks();
-		set_opt(CURLOPT_URL, request.url.c_str());
-		if (!request.user_agent.empty()) { set_opt(CURLOPT_USERAGENT, request.user_agent.c_str()); }
-		if (!request.post_fields.empty()) { set_opt(CURLOPT_POSTFIELDS, request.post_fields.c_str()); }
-		add_headers(request.headers);
-	}
-
 	explicit EasyHandle(easy::Request const& request) : m_handle(curl_easy_init()) {
 		set_callbacks();
 		set_opt(CURLOPT_URL, request.url.c_str());
@@ -40,17 +32,7 @@ class EasyHandle {
 		curl_easy_setopt(m_handle.get(), opt, value);
 	}
 
-	[[nodiscard]] auto perform() -> std::expected<Response, Error> {
-		auto const err = curl_easy_perform(m_handle.get());
-		if (err != CURLE_OK) { return std::unexpected{Error{.code = CurlCode{err}, .text = std::move(m_error)}}; }
-
-		auto response_code = long{};
-		// NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-		curl_easy_getinfo(m_handle.get(), CURLINFO_RESPONSE_CODE, &response_code);
-		return Response{.code = std::int64_t(response_code), .bytes = ByteArray{.bytes = std::move(m_bytes)}};
-	}
-
-	[[nodiscard]] auto perform2() -> std::expected<easy::Response, easy::Error> {
+	[[nodiscard]] auto perform() -> std::expected<easy::Response, easy::Error> {
 		auto const err = curl_easy_perform(m_handle.get());
 		if (err != CURLE_OK) { return std::unexpected{easy::Error{.code = CurlCode{err}, .text = std::move(m_error)}}; }
 
@@ -147,12 +129,16 @@ void append_queries_to(std::string& out_url, std::span<Query const> queries) {
 	return std::format("{} error ({}):\n{}", prefix, std::to_underlying(status.get_code()), error_text);
 }
 } // namespace
+
+auto Error::from_response(Status const status, std::string_view const error_text) -> Error {
+	return Error{.status = status, .text = to_error_text(status, error_text)};
+}
 } // namespace http
 
 auto easy::perform(Request const& request) -> Result {
 	if (request.url.empty()) { return {}; }
 	auto handle = EasyHandle{request};
-	return handle.perform2();
+	return handle.perform();
 }
 
 auto http::to_easy_request(Request request) -> easy::Request {
