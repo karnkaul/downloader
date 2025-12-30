@@ -6,6 +6,7 @@
 #include <string>
 
 namespace kcurl::easy {
+/// \brief Error of a perform operation.
 struct Error {
 	/// \brief Code returned by libcurl.
 	CurlCode code{};
@@ -13,6 +14,7 @@ struct Error {
 	std::string text{};
 };
 
+/// \brief Input parameter for perform().
 struct Request {
 	/// \brief URL to fetch. Must be a valid URL.
 	std::string url{};
@@ -25,6 +27,7 @@ struct Request {
 	std::vector<std::string> headers{};
 };
 
+/// \brief Successful response of a perform operation.
 struct Response {
 	/// \brief Response code.
 	std::int64_t code{};
@@ -32,8 +35,11 @@ struct Response {
 	ByteArray bytes{};
 };
 
+/// \brief Result of a fetch operation.
 using Result = std::expected<Response, Error>;
 
-/// \returns Result of operation.
+/// \brief Primary easy API.
+/// \param request easy::Request to perform.
+/// \returns easy::Response as a ByteArray on success, else easy::Error.
 [[nodiscard]] auto perform(Request const& request) -> Result;
 } // namespace kcurl::easy
