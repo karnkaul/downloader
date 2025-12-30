@@ -1,6 +1,7 @@
 #pragma once
 #include "kcurl/byte_array.hpp"
-#include "kcurl/types.hpp"
+#include "kcurl/curl_code.hpp"
+#include <cstdint>
 #include <expected>
 #include <string>
 

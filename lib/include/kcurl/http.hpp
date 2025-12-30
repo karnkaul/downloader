@@ -6,6 +6,8 @@ namespace kcurl::http {
 enum class Verb : std::int8_t { Get, Post };
 
 struct Error {
+	[[nodiscard]] static auto from_response(Status status, std::string_view error_text) -> Error;
+
 	CurlCode curl_code{};
 	Status status{};
 	std::string text{};
@@ -40,8 +42,8 @@ struct Response {
 	}
 
 	/// \returns Error with given error_text and this response's status.
-	[[nodiscard]] auto rewrap_as_error(std::string error_text) const -> Error {
-		return Error{.status = status, .text = std::move(error_text)};
+	[[nodiscard]] auto rewrap_as_error(std::string_view const error_text) const -> Error {
+		return Error::from_response(status, error_text);
 	}
 
 	Type payload{};
