@@ -18,6 +18,10 @@
 
 See the included [example](example/src/main.cpp).
 
+### API Reference
+
+Hosted [here](https://karnkaul.github.io/kcurl/).
+
 ### Requirements
 
 - Desktop OS (`int main()` entrypoint)
