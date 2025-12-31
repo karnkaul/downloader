@@ -16,6 +16,12 @@ struct Error {
 
 /// \brief Input parameter for perform().
 struct Request {
+	enum Flag : std::uint8_t {
+		None = 0,
+		SkipPeerVerification = 1 << 0,
+		SkipHostnameVerification = 1 << 1,
+	};
+
 	/// \brief URL to fetch. Must be a valid URL.
 	std::string url{};
 
@@ -25,6 +31,8 @@ struct Request {
 	std::string post_fields{};
 	/// \brief List of HTTP headers, if any.
 	std::vector<std::string> headers{};
+	/// \brief Request flags.
+	Flag flags{None};
 };
 
 /// \brief Successful response of a perform operation.
