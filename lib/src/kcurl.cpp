@@ -169,10 +169,7 @@ auto http::perform(easy::Request const& request) -> Result<ByteArray> {
 	}
 
 	auto ret = Response{.payload = std::move(response->bytes), .status = Status{response->code}};
-	if (ret.status.is_error()) {
-		auto error_text = to_error_text(ret.status, ret.payload.as_string_view());
-		return std::unexpected{ret.rewrap_as_error(std::move(error_text))};
-	}
+	if (ret.status.is_error()) { return std::unexpected{ret.rewrap_as_error(ret.payload.as_string_view())}; }
 
 	return ret;
 }
