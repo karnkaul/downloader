@@ -24,6 +24,8 @@ struct Error {
 
 /// \brief Input parameter for fetch().
 struct Request {
+	using Flag = easy::Request::Flag;
+
 	/// \brief URL to fetch. Must be a valid URL.
 	std::string base_url{};
 
@@ -37,6 +39,8 @@ struct Request {
 	std::vector<Query> headers{};
 	/// \brief Request method.
 	Verb verb{Verb::Get};
+	/// \brief Request flags.
+	Flag flags{};
 };
 
 /// \brief Successful response of a fetch operation.
