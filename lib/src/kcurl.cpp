@@ -203,8 +203,8 @@ auto http::perform(easy::Request const& request) -> Result<ByteArray> {
 }
 } // namespace kcurl
 
-auto std::formatter<kcurl::Curl::Feature>::format(kcurl::Curl::Feature const& flags, format_context& fc)
-	-> format_context::iterator {
+using Feature = kcurl::Curl::Feature;
+auto std::formatter<Feature>::format(Feature const& flags, format_context& fc) -> format_context::iterator {
 	using Feature = kcurl::Curl::Feature;
 	auto first = true;
 	auto const append = [&](std::string_view const text) {
