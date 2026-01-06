@@ -1,7 +1,7 @@
 #pragma once
 #include <curl/curl.h>
 #include <cstdint>
-#include <string>
+#include <format>
 
 namespace kcurl {
 /// \brief Top-level RAII wrapper for curl.
@@ -31,6 +31,14 @@ class Curl {
 
 	[[nodiscard]] auto get_features() const -> Feature;
 };
-
-[[nodiscard]] auto features_to_string(Curl::Feature flags) -> std::string;
 } // namespace kcurl
+
+template <>
+struct std::formatter<kcurl::Curl::Feature> {
+	template <class ParseContext>
+	constexpr auto parse(ParseContext& ctx) {
+		return ctx.begin();
+	}
+
+	static auto format(kcurl::Curl::Feature const& flags, format_context& fc) -> format_context::iterator;
+};

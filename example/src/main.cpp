@@ -36,8 +36,7 @@ auto run(int const argc, char const* const* const argv) -> int {
 	}
 
 	auto const curl = kcurl::Curl{};
-	auto const features = kcurl::features_to_string(curl.get_features());
-	std::println("kcurl {}\nfeatures: {}", kcurl::build_version_v, features);
+	std::println("kcurl {}\nfeatures: {}\n", kcurl::build_version_v, curl.get_features());
 
 	std::println("downloading '{}' ...", request.url);
 	auto const result = kcurl::easy::perform(request);

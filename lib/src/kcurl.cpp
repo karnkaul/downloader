@@ -130,10 +130,22 @@ void append_queries_to(std::string& out_url, std::span<Query const> queries) {
 	}();
 	return std::format("{} error ({}):\n{}", prefix, std::to_underlying(status.get_code()), error_text);
 }
+
+[[nodiscard]] auto to_error(easy::Error const& in) -> Error {
+	return Error{.curl_code = in.code, .text = to_error_text(in.code, in.text)};
+}
+
+[[nodiscard]] auto to_error(Status const status, std::string_view const error_text) -> Error {
+	return Error{.status = status, .text = to_error_text(status, error_text)};
+}
+
+[[nodiscard]] auto to_response(easy::Response in) -> Response<ByteArray> {
+	return Response{.payload = std::move(in.bytes), .status = Status{in.code}};
+}
 } // namespace
 
 auto Error::from_response(Status const status, std::string_view const error_text) -> Error {
-	return Error{.status = status, .text = to_error_text(status, error_text)};
+	return to_error(status, error_text);
 }
 } // namespace http
 
@@ -179,32 +191,36 @@ auto http::to_easy_request(Request request) -> easy::Request {
 }
 
 auto http::perform(easy::Request const& request) -> Result<ByteArray> {
-	auto response = easy::perform(request);
+	auto easy_result = easy::perform(request);
+	if (!easy_result) { return std::unexpected{to_error(easy_result.error())}; }
 
-	if (!response) {
-		return std::unexpected{Error{
-			.curl_code = response.error().code,
-			.text = to_error_text(response.error().code, response.error().text),
-		}};
+	auto response = to_response(std::move(easy_result).value());
+	if (response.status.is_error()) {
+		return std::unexpected{response.rewrap_as_error(response.payload.as_string_view())};
 	}
 
-	auto ret = Response{.payload = std::move(response->bytes), .status = Status{response->code}};
-	if (ret.status.is_error()) { return std::unexpected{ret.rewrap_as_error(ret.payload.as_string_view())}; }
-
-	return ret;
+	return response;
 }
 } // namespace kcurl
 
-auto kcurl::features_to_string(Curl::Feature const flags) -> std::string {
+using Feature = kcurl::Curl::Feature;
+auto std::formatter<Feature>::format(Feature const& flags, format_context& fc) -> format_context::iterator {
 	using Feature = kcurl::Curl::Feature;
-	auto ret = std::string{};
-	if ((flags & Feature::TLS) == Feature::TLS) { ret += "TLS|"; }
-	if ((flags & Feature::IPv6) == Feature::IPv6) { ret += "IPv6|"; }
-	if ((flags & Feature::Win32Unicode) == Feature::Win32Unicode) { ret += "Win32Unicode|"; }
-	if ((flags & Feature::UnixSockets) == Feature::UnixSockets) { ret += "UnixSockets|"; }
-	if ((flags & Feature::Http2) == Feature::Http2) { ret += "HTTP2|"; }
-	if ((flags & Feature::Http3) == Feature::Http3) { ret += "HTTP3|"; }
-	if ((flags & Feature::LargeFile) == Feature::LargeFile) { ret += "LargeFile|"; }
-	if (!ret.empty()) { ret.pop_back(); }
-	return ret;
+	auto first = true;
+	auto const append = [&](std::string_view const text) {
+		if (!first) {
+			format_to(fc.out(), "|{}", text);
+		} else {
+			format_to(fc.out(), "{}", text);
+		}
+		first = false;
+	};
+	if ((flags & Feature::TLS) == Feature::TLS) { append("TLS"); }
+	if ((flags & Feature::IPv6) == Feature::IPv6) { append("IPv6"); }
+	if ((flags & Feature::Win32Unicode) == Feature::Win32Unicode) { append("Win32Unicode"); }
+	if ((flags & Feature::UnixSockets) == Feature::UnixSockets) { append("UnixSockets"); }
+	if ((flags & Feature::Http2) == Feature::Http2) { append("HTTP2"); }
+	if ((flags & Feature::Http3) == Feature::Http3) { append("HTTP3"); }
+	if ((flags & Feature::LargeFile) == Feature::LargeFile) { append("LargeFile"); }
+	return fc.out();
 }
