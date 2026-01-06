@@ -1,1 +1,1 @@
-set(kcurl_version "0.1.6")
+set(kcurl_version "0.1.7")
