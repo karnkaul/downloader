@@ -5,8 +5,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: init
+        run: |
+          uname -m
+          sudo apt update -yqq && sudo apt install -yqq clang-format-20
+          sudo update-alternatives --remove-all clang-format
+          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-20 10
+          clang-format --version
       - name: format code
-        run: scripts/format_code.sh
+        run:
+          scripts/format_code.sh
       - name: check diff
         run: .github/format_check_diff.sh
   x64-linux-gcc:

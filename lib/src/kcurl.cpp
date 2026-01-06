@@ -203,9 +203,8 @@ auto http::perform(easy::Request const& request) -> Result<ByteArray> {
 }
 } // namespace kcurl
 
-using Feature = kcurl::Curl::Feature;
-auto std::formatter<Feature>::format(Feature const& flags, format_context& fc) -> format_context::iterator {
-	using Feature = kcurl::Curl::Feature;
+auto std::formatter<kcurl::Curl::Feature>::format(kcurl::Curl::Feature const flags, format_context& fc)
+	-> format_context::iterator {
 	auto first = true;
 	auto const append = [&](std::string_view const text) {
 		if (!first) {
@@ -215,6 +214,8 @@ auto std::formatter<Feature>::format(Feature const& flags, format_context& fc) -
 		}
 		first = false;
 	};
+
+	using Feature = kcurl::Curl::Feature;
 	if ((flags & Feature::TLS) == Feature::TLS) { append("TLS"); }
 	if ((flags & Feature::IPv6) == Feature::IPv6) { append("IPv6"); }
 	if ((flags & Feature::Win32Unicode) == Feature::Win32Unicode) { append("Win32Unicode"); }

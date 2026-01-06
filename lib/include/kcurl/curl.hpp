@@ -40,5 +40,5 @@ struct std::formatter<kcurl::Curl::Feature> {
 		return ctx.begin();
 	}
 
-	static auto format(kcurl::Curl::Feature const& flags, format_context& fc) -> format_context::iterator;
+	static auto format(kcurl::Curl::Feature flags, format_context& fc) -> format_context::iterator;
 };
