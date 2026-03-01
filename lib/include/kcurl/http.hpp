@@ -1,6 +1,7 @@
 #pragma once
 #include "kcurl/easy.hpp"
 #include "kcurl/http_status.hpp"
+#include <string_view>
 
 namespace kcurl::http {
 enum class Verb : std::int8_t { Get, Post };
@@ -68,6 +69,15 @@ struct Response {
 /// reuse for custom Reponse payloads (eg JSON).
 template <typename Type>
 using Result = std::expected<Response<Type>, Error>;
+
+/// \brief Replace special characters to be URL-friendly.
+/// \param text Input (unescaped) text.
+/// \returns Escaped string.
+[[nodiscard]] auto escape(std::string_view text) -> std::string;
+/// \brief Replace URL escapes with their source characters.
+/// \param escaped Escaped string.
+/// \returns Unescaped string.
+[[nodiscard]] auto unescape(std::string_view escaped) -> std::string;
 
 /// \param request http Request to convert.
 /// \returns Corresponding easy::Request.
