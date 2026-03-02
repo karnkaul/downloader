@@ -8,6 +8,7 @@
 #include <iterator>
 #include <memory>
 #include <span>
+#include <string_view>
 #include <utility>
 
 namespace kcurl {
@@ -82,6 +83,23 @@ class Handle {
 
 namespace http {
 namespace {
+struct EscapeEntry {
+	char ch{};
+	std::string_view str{};
+};
+
+constexpr auto escape_entries_v = std::array{
+	EscapeEntry{.ch = ' ', .str = "%20"},  EscapeEntry{.ch = '#', .str = "%23"}, EscapeEntry{.ch = '$', .str = "%24"},
+	EscapeEntry{.ch = '%', .str = "%25"},  EscapeEntry{.ch = '&', .str = "%26"}, EscapeEntry{.ch = '@', .str = "%40"},
+	EscapeEntry{.ch = '`', .str = "%60"},  EscapeEntry{.ch = '/', .str = "%2F"}, EscapeEntry{.ch = ':', .str = "%3A"},
+	EscapeEntry{.ch = ';', .str = "%3B"},  EscapeEntry{.ch = '<', .str = "%3C"}, EscapeEntry{.ch = '=', .str = "%3D"},
+	EscapeEntry{.ch = '>', .str = "%3F"},  EscapeEntry{.ch = '?', .str = "%3F"}, EscapeEntry{.ch = '[', .str = "%5B"},
+	EscapeEntry{.ch = '\\', .str = "%5C"}, EscapeEntry{.ch = ']', .str = "%5D"}, EscapeEntry{.ch = '^', .str = "%5E"},
+	EscapeEntry{.ch = '{', .str = "%7B"},  EscapeEntry{.ch = '|', .str = "%7C"}, EscapeEntry{.ch = '}', .str = "%7D"},
+	EscapeEntry{.ch = '~', .str = "%7E"},  EscapeEntry{.ch = '"', .str = "%22"}, EscapeEntry{.ch = '\'', .str = "%27"},
+	EscapeEntry{.ch = '+', .str = "%2B"},
+};
+
 void append_to(std::string& out, Query const& query) {
 	if (query.key.empty()) { return; }
 	if (!query.value.empty()) {
@@ -172,6 +190,42 @@ auto easy::perform(Request const& request) -> Result {
 	return handle.perform();
 }
 
+auto http::escape(std::string_view const text) -> std::string {
+	auto ret = std::string{};
+	ret.reserve(text.size());
+	for (char const ch : text) {
+		// NOLINTNEXTLINE(readability-qualified-auto)
+		auto const it = std::ranges::find_if(escape_entries_v, [ch](EscapeEntry const& e) { return e.ch == ch; });
+		if (it != escape_entries_v.end()) {
+			ret.append(it->str);
+			continue;
+		}
+
+		ret.push_back(ch);
+	}
+	return ret;
+}
+
+auto http::unescape(std::string_view escaped) -> std::string {
+	auto ret = std::string{};
+	ret.reserve(escaped.size());
+	auto const replace = [&] {
+		auto const pred = [&escaped](EscapeEntry const& e) { return escaped.starts_with(e.str); };
+		// NOLINTNEXTLINE(readability-qualified-auto)
+		auto const it = std::ranges::find_if(escape_entries_v, pred);
+		if (it == escape_entries_v.end()) { return false; }
+		ret.push_back(it->ch);
+		escaped.remove_prefix(it->str.size());
+		return true;
+	};
+	while (!escaped.empty()) {
+		if (escaped.starts_with('%') && replace()) { continue; }
+		ret.push_back(escaped.front());
+		escaped.remove_prefix(1);
+	}
+	return ret;
+}
+
 auto http::to_easy_request(Request request) -> easy::Request {
 	auto ret = easy::Request{
 		.url = std::move(request.base_url),
@@ -203,9 +257,8 @@ auto http::perform(easy::Request const& request) -> Result<ByteArray> {
 }
 } // namespace kcurl
 
-using Feature = kcurl::Curl::Feature;
-auto std::formatter<Feature>::format(Feature const& flags, format_context& fc) -> format_context::iterator {
-	using Feature = kcurl::Curl::Feature;
+auto std::formatter<kcurl::Curl::Feature>::format(kcurl::Curl::Feature const flags, format_context& fc)
+	-> format_context::iterator {
 	auto first = true;
 	auto const append = [&](std::string_view const text) {
 		if (!first) {
@@ -215,6 +268,8 @@ auto std::formatter<Feature>::format(Feature const& flags, format_context& fc) -
 		}
 		first = false;
 	};
+
+	using Feature = kcurl::Curl::Feature;
 	if ((flags & Feature::TLS) == Feature::TLS) { append("TLS"); }
 	if ((flags & Feature::IPv6) == Feature::IPv6) { append("IPv6"); }
 	if ((flags & Feature::Win32Unicode) == Feature::Win32Unicode) { append("Win32Unicode"); }
