@@ -48,12 +48,28 @@ struct Request {
 /// Response is a class template to enable user-side
 /// reuse for custom payloads (eg JSON).
 template <typename Type>
+struct Response;
+
+template <>
+struct Response<void> {
+	/// \returns Error with formatted error_text and this response's status.
+	[[nodiscard]] auto rewrap_as_error(std::string_view const error_text) const -> Error {
+		return Error::from_response(status, error_text);
+	}
+
+	Status status{};
+};
+
+template <typename Type>
 struct Response {
 	/// \returns Rewrapped payload with this response's status.
 	template <typename T>
 	[[nodiscard]] auto rewrap_as(T payload) const -> Response<T> {
 		return Response<T>{.payload = std::move(payload), .status = status};
 	}
+
+	/// \returns status wrapped in Response<void>.
+	[[nodiscard]] auto rewrap_as_void() const -> Response<void> { return Response<void>{.status = status}; }
 
 	/// \returns Error with formatted error_text and this response's status.
 	[[nodiscard]] auto rewrap_as_error(std::string_view const error_text) const -> Error {
