@@ -36,6 +36,21 @@ jobs:
         run: cd build; example/Debug/kcurl-example
       - name: test release
         run: cd build; example/Release/kcurl-example
+  x64-linux-gcc-nolibcurl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: init
+        run: |
+            uname -m
+            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 10
+            sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 10
+      - name: configure
+        run: cmake -S . --preset=ninja-gcc -B build -DKCURL_CI_NO_LIBCURL=ON
+      - name: build debug
+        run: cmake --build build --config=Debug -- -v
+      - name: build release
+        run: cmake --build build --config=Release -- -v
   x64-linux-clang:
     runs-on: ubuntu-latest
     steps:
@@ -111,6 +126,16 @@ jobs:
         run: cd build; example/Debug/kcurl-example
       - name: test release
         run: cd build; example/Release/kcurl-example
+  x64-windows-vs22-nolibcurl:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure
+        run: cmake -S . --preset=vs22 -B build -DKCURL_CI_NO_LIBCURL=ON
+      - name: build debug
+        run: cmake --build build --config=Debug --parallel
+      - name: build release
+        run: cmake --build build --config=Release --parallel
   x64-windows-clang:
     runs-on: windows-2025
     steps:

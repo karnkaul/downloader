@@ -3,7 +3,6 @@ add_library(${package_name}::${package_name} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 
-message(STATUS "[kcurl] linking to ${curl_link_target}")
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
   ${curl_link_target}
@@ -28,6 +27,10 @@ target_sources(${PROJECT_NAME} PUBLIC FILE_SET HEADERS
   "${CMAKE_CURRENT_BINARY_DIR}/${version_header}"
 )
 
-target_sources(${PROJECT_NAME} PRIVATE
-  src/kcurl.cpp
-)
+target_sources(${PROJECT_NAME} PRIVATE src/kcurl.cpp)
+
+if(KCURL_CI_NO_LIBCURL)
+  target_sources(${PROJECT_NAME} PRIVATE src/null_api.cpp)
+else()
+  target_sources(${PROJECT_NAME} PRIVATE src/curl_api.cpp)
+endif()
