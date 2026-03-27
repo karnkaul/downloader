@@ -1,5 +1,4 @@
 #pragma once
-#include <curl/curl.h>
 #include <cstdint>
 #include <format>
 
@@ -19,15 +18,15 @@ class Curl {
 		LargeFile = 1 << 6,
 	};
 
-	static constexpr auto flags_v = long{CURL_GLOBAL_DEFAULT};
-
 	Curl(Curl const&) = delete;
 	Curl(Curl&&) = delete;
 	Curl& operator=(Curl const&) = delete;
 	Curl& operator=(Curl&&) = delete;
 
-	explicit Curl(long const flags = flags_v) { curl_global_init(flags); }
-	~Curl() { curl_global_cleanup(); }
+	[[nodiscard]] static auto default_flags() -> long;
+
+	explicit Curl(long flags = default_flags());
+	~Curl();
 
 	[[nodiscard]] auto get_features() const -> Feature;
 };
