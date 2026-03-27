@@ -4,7 +4,7 @@ jobs:
   format-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: init
         run: |
           uname -m
@@ -20,7 +20,7 @@ jobs:
   x64-linux-gcc:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: init
         run: |
             uname -m
@@ -39,7 +39,7 @@ jobs:
   x64-linux-gcc-nolibcurl:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: init
         run: |
             uname -m
@@ -54,7 +54,7 @@ jobs:
   x64-linux-clang:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: init
         run: |
             uname -m
@@ -75,7 +75,7 @@ jobs:
   arm64-linux-gcc:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: init
         run: |
             uname -m
@@ -94,7 +94,7 @@ jobs:
   arm64-linux-clang:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: init
         run: |
             uname -m
@@ -115,7 +115,7 @@ jobs:
   x64-windows-vs22:
     runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: configure
         run: cmake -S . --preset=vs22 -B build
       - name: build debug
@@ -129,7 +129,7 @@ jobs:
   x64-windows-vs22-nolibcurl:
     runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: configure
         run: cmake -S . --preset=vs22 -B build -DKCURL_CI_NO_LIBCURL=ON
       - name: build debug
@@ -139,7 +139,7 @@ jobs:
   x64-windows-clang:
     runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: configure
         run: |
           set OPENSSL_ROOT_DIR="C:/Program Files/OpenSSL"
@@ -155,7 +155,7 @@ jobs:
   x64-mingw-gcc:
     runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: configure
         run: cmake -S . --preset=ninja-gcc -B build
       - name: build debug
