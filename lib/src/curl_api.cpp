@@ -46,6 +46,8 @@ class Handle {
 
 		m_error.resize(CURL_ERROR_SIZE);
 		set_opt(CURLOPT_ERRORBUFFER, m_error.data());
+
+		set_opt(CURLOPT_FOLLOWLOCATION, CURLFOLLOW_ALL);
 	}
 
 	auto on_write(std::span<std::byte const> in) -> std::size_t {
